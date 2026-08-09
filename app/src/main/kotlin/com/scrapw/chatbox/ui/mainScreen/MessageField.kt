@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.scrapw.chatbox.R
 import com.scrapw.chatbox.data.SettingsStates
 import com.scrapw.chatbox.speech.ContinuousSpeechRecognizer
+import com.scrapw.chatbox.speech.SpeechForegroundService
 import com.scrapw.chatbox.ui.ChatboxViewModel
 import com.scrapw.chatbox.ui.common.HapticConstants
 import kotlinx.coroutines.delay
@@ -66,6 +67,7 @@ fun MessageField(
             onFinalResult = { chatboxViewModel.onSpeechFinal(it) },
             onListeningChanged = { isListening = it },
             onUnavailable = {
+                SpeechForegroundService.stop(context)
                 Toast.makeText(
                     context,
                     context.getString(R.string.speech_recognition_unavailable),
@@ -78,6 +80,7 @@ fun MessageField(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
+            SpeechForegroundService.start(context)
             speechRecognizer.start()
         } else {
             Toast.makeText(
@@ -89,7 +92,10 @@ fun MessageField(
     }
 
     DisposableEffect(speechRecognizer) {
-        onDispose { speechRecognizer.destroy() }
+        onDispose {
+            speechRecognizer.destroy()
+            SpeechForegroundService.stop(context)
+        }
     }
 
     Crossfade(
@@ -172,10 +178,12 @@ fun MessageField(
                 onClick = {
                     if (isListening) {
                         speechRecognizer.stop()
+                        SpeechForegroundService.stop(context)
                     } else if (
                         context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
                         PackageManager.PERMISSION_GRANTED
                     ) {
+                        SpeechForegroundService.start(context)
                         speechRecognizer.start()
                     } else {
                         microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
