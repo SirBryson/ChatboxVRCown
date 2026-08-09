@@ -48,6 +48,10 @@ Chatbox is an Android app that using OSC to help players send Chatbox messages t
    you speak. A short pause completes the utterance and automatically starts a new one.
 4. Tap the microphone button again to stop listening.
 
+While voice input is active, a foreground-service notification keeps microphone access and the
+recognition process alive with the display off. The app also holds a partial wake lock until voice
+input is stopped, so remember to stop it after leaving VRChat.
+
 Voice text uses a rolling 140-character window: once it gets longer, the oldest characters are
 removed from the beginning while new words keep flowing into the same VRChat chatbox. After ten
 seconds without a new speech result, the app sends an empty chatbox update to clear it.
