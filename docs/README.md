@@ -26,6 +26,8 @@ Chatbox is an Android app that using OSC to help players send Chatbox messages t
 ## Features
 
 - Helps VR players send messages quickly from their cell phones
+- Continuous English speech-to-text with live partial transcripts
+- Automatically starts a fresh transcript after each spoken utterance
 - Provides a floating button to open the Chatbox in VRChat Mobile with one click
 - Quickly edit sent messages
 - Quickly repeat messages that others have not seen, or that expired
@@ -37,6 +39,18 @@ Chatbox is an Android app that using OSC to help players send Chatbox messages t
 [Github Releases](https://github.com/ScrapW/Chatbox/releases) is the only source where you can get official Chatbox downloads.
 
 ## Instructions
+
+### Continuous speech-to-text
+
+1. Configure the OSC destination and enable OSC in VRChat.
+2. Tap the microphone button and grant microphone access when prompted.
+3. Keep speaking normally. Partial transcripts replace the current VRChat chatbox text while
+   you speak. A short pause completes the utterance and automatically starts a new one.
+4. Tap the microphone button again to stop listening.
+
+Speech recognition is currently fixed to English (`en-US`). It uses the speech recognition
+service installed on the Android device; partial-result quality and offline availability depend
+on that service.
 
 ### Send messages from your phone to your PC client
 
