@@ -77,7 +77,7 @@ class ChatboxOSC(
     private var realtimeMsgInterval = 1500
 
 
-    fun sendRealtimeMessage(text: String) {
+    fun sendRealtimeMessage(text: String, isFinal: Boolean = false) {
         realtimeMsgJob?.cancel()
 
         Log.d(
@@ -93,7 +93,7 @@ class ChatboxOSC(
             }
 
             sendOscMessage("/chatbox/input", listOf(text, true, false))
-            sendOscMessage("/chatbox/typing", listOf(text.isNotEmpty()), 50)
+            sendOscMessage("/chatbox/typing", listOf(text.isNotEmpty() && !isFinal), 50)
 
             latestMsgTimestamp = System.currentTimeMillis()
         }
