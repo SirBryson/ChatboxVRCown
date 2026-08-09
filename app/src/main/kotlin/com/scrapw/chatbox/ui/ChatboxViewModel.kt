@@ -172,6 +172,25 @@ class ChatboxViewModel(
         }
     }
 
+    /** Replace the current chatbox contents with this utterance's live transcript. */
+    fun onSpeechPartial(text: String, local: Boolean = false) {
+        val osc = if (!local) remoteChatboxOSC else localChatboxOSC
+        messageText.value = TextFieldValue(text, TextRange(text.length))
+        osc.sendRealtimeMessage(text)
+    }
+
+    /** Send the final transcript once, archive it, and reset for the next utterance. */
+    fun onSpeechFinal(text: String, local: Boolean = false) {
+        if (text.isBlank()) return
+        val osc = if (!local) remoteChatboxOSC else localChatboxOSC
+        osc.sendRealtimeMessage(text, isFinal = true)
+
+        conversationUiState.addMessage(
+            Message(text, false, Instant.now())
+        )
+        messageText.value = TextFieldValue("", TextRange.Zero)
+    }
+
     fun sendMessage(local: Boolean = false) {
         val osc = if (!local) remoteChatboxOSC else localChatboxOSC
 
