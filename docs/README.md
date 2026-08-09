@@ -58,7 +58,9 @@ seconds without a new speech result, the app sends an empty chatbox update to cl
 
 Speech recognition is currently fixed to English (`en-US`). It uses the speech recognition
 service installed on the Android device; partial-result quality and offline availability depend
-on that service.
+on that service. On Android 13 and newer, the app requests latency-optimized automatic
+punctuation, capitalization, and formatted partial-result revisions. Recognition providers may
+ignore this request.
 
 ### Send messages from your phone to your PC client
 
