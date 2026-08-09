@@ -23,6 +23,8 @@ import com.scrapw.chatbox.ui.mainScreen.ConversationUiState
 import com.scrapw.chatbox.ui.mainScreen.Message
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -42,6 +44,9 @@ class ChatboxViewModel(
 ) : ViewModel() {
 
     companion object {
+        private const val VRCHAT_SPEECH_CHARACTER_LIMIT = 140
+        private const val SPEECH_CLEAR_DELAY_MILLIS = 10_000L
+
         private lateinit var instance: ChatboxViewModel
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
@@ -175,20 +180,34 @@ class ChatboxViewModel(
     /** Replace the current chatbox contents with this utterance's live transcript. */
     fun onSpeechPartial(text: String, local: Boolean = false) {
         val osc = if (!local) remoteChatboxOSC else localChatboxOSC
-        messageText.value = TextFieldValue(text, TextRange(text.length))
-        osc.sendRealtimeMessage(text)
+        val visibleText = text.takeLast(VRCHAT_SPEECH_CHARACTER_LIMIT)
+        messageText.value = TextFieldValue(visibleText, TextRange(visibleText.length))
+        osc.sendRealtimeMessage(visibleText)
+        scheduleSpeechChatboxClear(osc)
     }
 
     /** Send the final transcript once, archive it, and reset for the next utterance. */
     fun onSpeechFinal(text: String, local: Boolean = false) {
         if (text.isBlank()) return
         val osc = if (!local) remoteChatboxOSC else localChatboxOSC
-        osc.sendRealtimeMessage(text, isFinal = true)
+        val visibleText = text.takeLast(VRCHAT_SPEECH_CHARACTER_LIMIT)
+        osc.sendRealtimeMessage(visibleText, isFinal = true)
 
         conversationUiState.addMessage(
             Message(text, false, Instant.now())
         )
         messageText.value = TextFieldValue("", TextRange.Zero)
+        scheduleSpeechChatboxClear(osc)
+    }
+
+    private var speechClearJob: Job? = null
+
+    private fun scheduleSpeechChatboxClear(osc: ChatboxOSC) {
+        speechClearJob?.cancel()
+        speechClearJob = viewModelScope.launch {
+            delay(SPEECH_CLEAR_DELAY_MILLIS)
+            osc.sendRealtimeMessage("", isFinal = true)
+        }
     }
 
     fun sendMessage(local: Boolean = false) {
