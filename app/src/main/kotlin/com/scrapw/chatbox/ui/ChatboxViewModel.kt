@@ -177,28 +177,36 @@ class ChatboxViewModel(
         }
     }
 
-    /** Replace the current chatbox contents with this utterance's live transcript. */
+    private var speechCommittedText = ""
+
+    /**
+     * Replace only the current recognition session while retaining earlier sessions
+     * from the same ten-second chatbox window.
+     */
     fun onSpeechPartial(text: String, local: Boolean = false) {
         val osc = if (!local) remoteChatboxOSC else localChatboxOSC
-        val visibleText = text.takeLast(VRCHAT_SPEECH_CHARACTER_LIMIT)
+        val combinedText = joinSpeechText(speechCommittedText, text)
+        val visibleText = combinedText.takeLast(VRCHAT_SPEECH_CHARACTER_LIMIT)
         messageText.value = TextFieldValue(visibleText, TextRange(visibleText.length))
         osc.sendRealtimeMessage(visibleText)
         scheduleSpeechChatboxClear(osc)
     }
 
-    /** Send the final transcript once, archive it, and reset for the next utterance. */
+    /** Commit this internal recognizer session without ending the chatbox window. */
     fun onSpeechFinal(text: String, local: Boolean = false) {
         if (text.isBlank()) return
         val osc = if (!local) remoteChatboxOSC else localChatboxOSC
-        val visibleText = text.takeLast(VRCHAT_SPEECH_CHARACTER_LIMIT)
+        speechCommittedText = joinSpeechText(speechCommittedText, text)
+        val visibleText = speechCommittedText.takeLast(VRCHAT_SPEECH_CHARACTER_LIMIT)
         osc.sendRealtimeMessage(visibleText, isFinal = true)
-
-        conversationUiState.addMessage(
-            Message(text, false, Instant.now())
-        )
-        messageText.value = TextFieldValue("", TextRange.Zero)
+        messageText.value = TextFieldValue(visibleText, TextRange(visibleText.length))
         scheduleSpeechChatboxClear(osc)
     }
+
+    private fun joinSpeechText(existing: String, addition: String): String =
+        listOf(existing.trim(), addition.trim())
+            .filter { it.isNotEmpty() }
+            .joinToString(" ")
 
     private var speechClearJob: Job? = null
 
@@ -206,6 +214,13 @@ class ChatboxViewModel(
         speechClearJob?.cancel()
         speechClearJob = viewModelScope.launch {
             delay(SPEECH_CLEAR_DELAY_MILLIS)
+            if (speechCommittedText.isNotBlank()) {
+                conversationUiState.addMessage(
+                    Message(speechCommittedText, false, Instant.now())
+                )
+            }
+            speechCommittedText = ""
+            messageText.value = TextFieldValue("", TextRange.Zero)
             osc.sendRealtimeMessage("", isFinal = true)
         }
     }
