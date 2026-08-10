@@ -45,7 +45,8 @@ class ChatboxViewModel(
 
     companion object {
         private const val VRCHAT_SPEECH_CHARACTER_LIMIT = 140
-        private const val SPEECH_CLEAR_DELAY_MILLIS = 25_000L
+        private const val SPEECH_SESSION_RESET_DELAY_MILLIS = 10_000L
+        private const val VRCHAT_CLEAR_DELAY_MILLIS = 25_000L
 
         private lateinit var instance: ChatboxViewModel
 
@@ -189,7 +190,7 @@ class ChatboxViewModel(
         val visibleText = combinedText.takeLast(VRCHAT_SPEECH_CHARACTER_LIMIT)
         messageText.value = TextFieldValue(visibleText, TextRange(visibleText.length))
         osc.sendRealtimeMessage(visibleText)
-        scheduleSpeechChatboxClear(osc)
+        scheduleSpeechTimeouts(osc)
     }
 
     /** Commit this internal recognizer session without ending the chatbox window. */
@@ -200,7 +201,7 @@ class ChatboxViewModel(
         val visibleText = speechCommittedText.takeLast(VRCHAT_SPEECH_CHARACTER_LIMIT)
         osc.sendRealtimeMessage(visibleText, isFinal = true)
         messageText.value = TextFieldValue(visibleText, TextRange(visibleText.length))
-        scheduleSpeechChatboxClear(osc)
+        scheduleSpeechTimeouts(osc)
     }
 
     private fun joinSpeechText(existing: String, addition: String): String =
@@ -208,12 +209,15 @@ class ChatboxViewModel(
             .filter { it.isNotEmpty() }
             .joinToString(" ")
 
-    private var speechClearJob: Job? = null
+    private var speechSessionResetJob: Job? = null
+    private var vrChatboxClearJob: Job? = null
 
-    private fun scheduleSpeechChatboxClear(osc: ChatboxOSC) {
-        speechClearJob?.cancel()
-        speechClearJob = viewModelScope.launch {
-            delay(SPEECH_CLEAR_DELAY_MILLIS)
+    private fun scheduleSpeechTimeouts(osc: ChatboxOSC) {
+        speechSessionResetJob?.cancel()
+        vrChatboxClearJob?.cancel()
+
+        speechSessionResetJob = viewModelScope.launch {
+            delay(SPEECH_SESSION_RESET_DELAY_MILLIS)
             if (speechCommittedText.isNotBlank()) {
                 conversationUiState.addMessage(
                     Message(speechCommittedText, false, Instant.now())
@@ -221,6 +225,10 @@ class ChatboxViewModel(
             }
             speechCommittedText = ""
             messageText.value = TextFieldValue("", TextRange.Zero)
+        }
+
+        vrChatboxClearJob = viewModelScope.launch {
+            delay(VRCHAT_CLEAR_DELAY_MILLIS)
             osc.sendRealtimeMessage("", isFinal = true)
         }
     }
