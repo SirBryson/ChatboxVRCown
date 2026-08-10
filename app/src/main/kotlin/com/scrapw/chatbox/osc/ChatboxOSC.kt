@@ -5,8 +5,11 @@ import com.illposed.osc.OSCMessage
 import com.illposed.osc.transport.udp.OSCPortOut
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.net.InetAddress
 import java.net.UnknownHostException
 
@@ -14,6 +17,10 @@ class ChatboxOSC(
     ipAddress: String,
     var port: Int
 ) {
+
+    private val oscScope = CoroutineScope(Dispatchers.IO)
+    private val sendMutex = Mutex()
+    private var realtimeMsgJob: Job? = null
 
     val TAG: String
         get() = "OSC@$ipAddress:$port"
@@ -37,7 +44,7 @@ class ChatboxOSC(
         }
 
     init {
-        CoroutineScope(Dispatchers.IO).launch {
+        oscScope.launch {
             this@ChatboxOSC.ipAddress = ipAddress
         }
     }
@@ -51,11 +58,20 @@ class ChatboxOSC(
         }
 
     private fun sendOscMessage(address: String, arguments: List<Any?>, delay: Long = 0) {
-        CoroutineScope(Dispatchers.IO).launch {
+        oscScope.launch {
+            sendOscMessageNow(address, arguments, delay)
+        }
+    }
 
+    private suspend fun sendOscMessageNow(
+        address: String,
+        arguments: List<Any?>,
+        delay: Long = 0
+    ) {
+        delay(delay)
+        sendMutex.withLock {
             val message = OSCMessage(address, arguments)
             val sender = OSCPortOut(inetAddress, port)
-            delay(delay)
             try {
                 sender.send(message)
                 Log.d(TAG, "Message: ${message.address}  ${message.arguments}")
@@ -71,7 +87,14 @@ class ChatboxOSC(
     }
 
     fun sendRealtimeMessage(text: String, isFinal: Boolean = false) {
-        sendOscMessage("/chatbox/input", listOf(text, true, false))
-        sendOscMessage("/chatbox/typing", listOf(text.isNotEmpty() && !isFinal), 50)
+        realtimeMsgJob?.cancel()
+        realtimeMsgJob = oscScope.launch {
+            sendOscMessageNow("/chatbox/input", listOf(text, true, false))
+            sendOscMessageNow(
+                "/chatbox/typing",
+                listOf(text.isNotEmpty() && !isFinal),
+                50
+            )
+        }
     }
 }
