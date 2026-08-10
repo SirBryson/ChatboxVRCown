@@ -5,7 +5,6 @@ import com.illposed.osc.OSCMessage
 import com.illposed.osc.transport.udp.OSCPortOut
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.net.InetAddress
@@ -69,33 +68,10 @@ class ChatboxOSC(
 
     fun sendMessage(text: String, sendImmediately: Boolean, triggerSFX: Boolean) {
         sendOscMessage("/chatbox/input", listOf(text, sendImmediately, triggerSFX))
-        latestMsgTimestamp = System.currentTimeMillis()
     }
 
-    private var realtimeMsgJob: Job? = null
-    private var latestMsgTimestamp: Long = 0
-    private var realtimeMsgInterval = 1500
-
-
     fun sendRealtimeMessage(text: String, isFinal: Boolean = false) {
-        realtimeMsgJob?.cancel()
-
-        Log.d(
-            "Chatbox",
-            "$latestMsgTimestamp  ${System.currentTimeMillis()}  ${(System.currentTimeMillis() - latestMsgTimestamp)}"
-        )
-
-        realtimeMsgJob = CoroutineScope(Dispatchers.IO).launch {
-            val timeStamp = System.currentTimeMillis()
-
-            if (timeStamp - latestMsgTimestamp < realtimeMsgInterval) {
-                delay(realtimeMsgInterval - (timeStamp - latestMsgTimestamp))
-            }
-
-            sendOscMessage("/chatbox/input", listOf(text, true, false))
-            sendOscMessage("/chatbox/typing", listOf(text.isNotEmpty() && !isFinal), 50)
-
-            latestMsgTimestamp = System.currentTimeMillis()
-        }
+        sendOscMessage("/chatbox/input", listOf(text, true, false))
+        sendOscMessage("/chatbox/typing", listOf(text.isNotEmpty() && !isFinal), 50)
     }
 }
