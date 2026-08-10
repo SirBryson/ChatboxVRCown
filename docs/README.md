@@ -54,7 +54,9 @@ input is stopped, so remember to stop it after leaving VRChat.
 
 Voice text uses a rolling 140-character window: once it gets longer, the oldest characters are
 removed from the beginning while new words keep flowing into the same VRChat chatbox. After ten
-seconds without a new speech result, the app sends an empty chatbox update to clear it.
+seconds without a new speech result, the app sends an empty chatbox update to clear it. Short
+pauses may restart Android's internal recognition session, but completed session text remains in
+the same rolling chatbox buffer until the full ten-second timeout.
 
 Speech recognition is currently fixed to English (`en-US`). It uses the speech recognition
 service installed on the Android device; partial-result quality and offline availability depend
