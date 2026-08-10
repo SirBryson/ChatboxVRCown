@@ -45,7 +45,7 @@ class ChatboxViewModel(
 
     companion object {
         private const val VRCHAT_SPEECH_CHARACTER_LIMIT = 140
-        private const val SPEECH_CLEAR_DELAY_MILLIS = 10_000L
+        private const val SPEECH_CLEAR_DELAY_MILLIS = 25_000L
 
         private lateinit var instance: ChatboxViewModel
 
