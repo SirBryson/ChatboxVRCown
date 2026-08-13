@@ -45,7 +45,7 @@ class ChatboxViewModel(
 
     companion object {
         private const val VRCHAT_SPEECH_CHARACTER_LIMIT = 140
-        private const val SPEECH_SESSION_RESET_DELAY_MILLIS = 10_000L
+        private const val SPEECH_SESSION_RESET_DELAY_MILLIS = 7_500L
         private const val VRCHAT_CLEAR_DELAY_MILLIS = 25_000L
 
         private lateinit var instance: ChatboxViewModel
@@ -182,7 +182,7 @@ class ChatboxViewModel(
 
     /**
      * Replace only the current recognition session while retaining earlier sessions
-     * from the same ten-second chatbox window.
+     * from the same 7.5-second chatbox window.
      */
     fun onSpeechPartial(text: String, local: Boolean = false) {
         val osc = if (!local) remoteChatboxOSC else localChatboxOSC
