@@ -21,7 +21,8 @@ class ContinuousSpeechRecognizer(
     private val onPartialResult: (String) -> Unit,
     private val onFinalResult: (String) -> Unit,
     private val onListeningChanged: (Boolean) -> Unit,
-    private val onUnavailable: () -> Unit
+    private val onUnavailable: () -> Unit,
+    private val transformResult: (String) -> String = { it }
 ) : RecognitionListener {
 
     private val handler = Handler(Looper.getMainLooper())
@@ -104,6 +105,7 @@ class ContinuousSpeechRecognizer(
             ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
             ?.firstOrNull()
             ?.trim()
+            ?.let(transformResult)
             .orEmpty()
 
     override fun onPartialResults(partialResults: Bundle?) {
