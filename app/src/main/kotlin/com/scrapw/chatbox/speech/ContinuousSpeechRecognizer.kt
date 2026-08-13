@@ -22,7 +22,10 @@ class ContinuousSpeechRecognizer(
     private val onFinalResult: (String) -> Unit,
     private val onListeningChanged: (Boolean) -> Unit,
     private val onUnavailable: () -> Unit,
-    private val transformResult: (String) -> String = { it }
+    private val transformResult: (String) -> String = { it },
+    private val selectFinalResult: (List<String>, FloatArray?) -> String = { candidates, _ ->
+        candidates.firstOrNull().orEmpty()
+    }
 ) : RecognitionListener {
 
     private val handler = Handler(Looper.getMainLooper())
@@ -40,7 +43,7 @@ class ContinuousSpeechRecognizer(
         putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.US.toLanguageTag())
         putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, Locale.US.toLanguageTag())
         putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
         putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 3_000L)
         putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2_000L)
 
@@ -50,6 +53,9 @@ class ContinuousSpeechRecognizer(
                 RecognizerIntent.FORMATTING_OPTIMIZE_QUALITY
             )
             putExtra(RecognizerIntent.EXTRA_HIDE_PARTIAL_TRAILING_PUNCTUATION, false)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            putExtra(RecognizerIntent.EXTRA_REQUEST_WORD_CONFIDENCE, true)
         }
     }
 
@@ -100,7 +106,7 @@ class ContinuousSpeechRecognizer(
         if (shouldListen) startSession(delayMillis)
     }
 
-    private fun bestResult(results: Bundle?): String =
+    private fun bestPartialResult(results: Bundle?): String =
         results
             ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
             ?.firstOrNull()
@@ -109,11 +115,19 @@ class ContinuousSpeechRecognizer(
             .orEmpty()
 
     override fun onPartialResults(partialResults: Bundle?) {
-        bestResult(partialResults).takeIf { it.isNotEmpty() }?.let(onPartialResult)
+        bestPartialResult(partialResults).takeIf { it.isNotEmpty() }?.let(onPartialResult)
     }
 
     override fun onResults(results: Bundle?) {
-        bestResult(results).takeIf { it.isNotEmpty() }?.let(onFinalResult)
+        val candidates = results
+            ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+            .orEmpty()
+        val confidences = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)
+        selectFinalResult(candidates, confidences)
+            .trim()
+            .takeIf { it.isNotEmpty() }
+            ?.let(transformResult)
+            ?.let(onFinalResult)
         restartSession()
     }
 
