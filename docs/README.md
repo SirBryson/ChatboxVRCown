@@ -71,6 +71,9 @@ punctuation, capitalization, and formatted partial-result revisions. Recognition
 ignore this request. The app therefore also runs the recognized English text through a small local
 online punctuation model, adding punctuation and capitalization without uploading the transcript
 to another service. If that model cannot initialize, speech recognition continues with raw text.
+For final results, the app requests up to five hypotheses from the Android recognizer and
+conservatively re-ranks them using provider confidence and obvious English grammar errors. It can
+only choose a recognizer-provided hypothesis and never invent or replace words itself.
 
 ### Send messages from your phone to your PC client
 
