@@ -30,14 +30,25 @@ tasks.register("downloadPunctuationModel") {
 tasks.register("preparePunctuationAssets", Copy) {
     dependsOn("downloadPunctuationModel")
     from({ tarTree(resources.bzip2(punctuationArchive.get().asFile)) }) {
-        include "${punctuationModelVersion}/model.int8.onnx"
-        include "${punctuationModelVersion}/bpe.vocab"
+        include "**/model.int8.onnx"
+        include "**/bpe.vocab"
         eachFile { file ->
             file.path = "punctuation/${file.name}"
         }
         includeEmptyDirs = false
     }
     into(punctuationAssetsDir)
+}
+
+tasks.register("verifyPunctuationAssets") {
+    dependsOn("preparePunctuationAssets")
+    doLast {
+        def model = punctuationAssetsDir.get().file("punctuation/model.int8.onnx").asFile
+        def vocab = punctuationAssetsDir.get().file("punctuation/bpe.vocab").asFile
+        if (!model.isFile() || model.length() == 0L || !vocab.isFile() || vocab.length() == 0L) {
+            throw new GradleException("Punctuation assets were not extracted; refusing to build a broken APK")
+        }
+    }
 }
 
 if (keystorePropertiesFile.exists()){
@@ -111,7 +122,7 @@ android {
     }
 }
 
-preBuild.dependsOn("preparePunctuationAssets")
+preBuild.dependsOn("verifyPunctuationAssets")
 
 aboutLibraries {
     configPath = "config"

@@ -22,7 +22,10 @@ class ContinuousSpeechRecognizer(
     private val onFinalResult: (String) -> Unit,
     private val onListeningChanged: (Boolean) -> Unit,
     private val onUnavailable: () -> Unit,
-    private val transformResult: (String) -> String = { it }
+    private val transformResult: (String) -> String = { it },
+    private val selectFinalResult: (List<String>, FloatArray?) -> String = { candidates, _ ->
+        candidates.firstOrNull().orEmpty()
+    }
 ) : RecognitionListener {
 
     private val handler = Handler(Looper.getMainLooper())
@@ -40,16 +43,20 @@ class ContinuousSpeechRecognizer(
         putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.US.toLanguageTag())
         putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, Locale.US.toLanguageTag())
         putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
         putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 3_000L)
         putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2_000L)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            putExtra(RecognizerIntent.EXTRA_MASK_OFFENSIVE_WORDS, false)
             putExtra(
                 RecognizerIntent.EXTRA_ENABLE_FORMATTING,
                 RecognizerIntent.FORMATTING_OPTIMIZE_QUALITY
             )
             putExtra(RecognizerIntent.EXTRA_HIDE_PARTIAL_TRAILING_PUNCTUATION, false)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            putExtra(RecognizerIntent.EXTRA_REQUEST_WORD_CONFIDENCE, true)
         }
     }
 
@@ -113,10 +120,11 @@ class ContinuousSpeechRecognizer(
     }
 
     override fun onResults(results: Bundle?) {
-        results
+        val candidates = results
             ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-            ?.firstOrNull()
             .orEmpty()
+        val confidences = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)
+        selectFinalResult(candidates, confidences)
             .trim()
             .takeIf { it.isNotEmpty() }
             ?.let(transformResult)
