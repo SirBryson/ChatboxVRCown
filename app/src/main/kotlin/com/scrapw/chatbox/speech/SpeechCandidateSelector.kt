@@ -20,7 +20,7 @@ class SpeechCandidateSelector {
         }?.value ?: usable.first()
     }
 
-    private fun score(text: String, rank: Int, confidence: Float?): Double {
+    private fun score(text: String, rank: Int, confidence: Double?): Double {
         val normalized = text
             .lowercase()
             .replace('’', '\'')
