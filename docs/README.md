@@ -53,12 +53,12 @@ recognition process alive with the display off. The app also holds a partial wak
 input is stopped, so remember to stop it after leaving VRChat.
 
 Voice text uses a rolling 140-character window: once it gets longer, the oldest characters are
-removed from the beginning while new words keep flowing into the same VRChat chatbox. After ten
+removed from the beginning while new words keep flowing into the same VRChat chatbox. After 7.5
 seconds without a new speech result, the app closes and resets its local speech buffer so the next
 speech starts a new session. It does not clear the existing VRChat bubble until 25 seconds of
 silence have elapsed. Short
 pauses may restart Android's internal recognition session, but completed session text remains in
-the same rolling chatbox buffer until the ten-second local session timeout.
+the same rolling chatbox buffer until the 7.5-second local session timeout.
 
 Partial speech results are sent to OSC immediately without application-side throttling. Android's
 internal endpointer is asked to wait up to three seconds of silence before finalizing a recognition
@@ -68,7 +68,9 @@ Speech recognition is currently fixed to English (`en-US`). It uses the speech r
 service installed on the Android device; partial-result quality and offline availability depend
 on that service. On Android 13 and newer, the app requests quality-optimized automatic
 punctuation, capitalization, and formatted partial-result revisions. Recognition providers may
-ignore this request.
+ignore this request. The app therefore also runs the recognized English text through a small local
+online punctuation model, adding punctuation and capitalization without uploading the transcript
+to another service. If that model cannot initialize, speech recognition continues with raw text.
 
 ### Send messages from your phone to your PC client
 
