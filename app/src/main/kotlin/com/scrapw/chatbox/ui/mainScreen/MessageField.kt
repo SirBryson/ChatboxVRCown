@@ -47,7 +47,6 @@ import com.scrapw.chatbox.R
 import com.scrapw.chatbox.data.SettingsStates
 import com.scrapw.chatbox.speech.ContinuousSpeechRecognizer
 import com.scrapw.chatbox.speech.SpeechForegroundService
-import com.scrapw.chatbox.speech.SpeechCandidateSelector
 import com.scrapw.chatbox.speech.SpeechPunctuator
 import com.scrapw.chatbox.ui.ChatboxViewModel
 import com.scrapw.chatbox.ui.common.HapticConstants
@@ -65,7 +64,6 @@ fun MessageField(
     val speechPunctuator = remember {
         runCatching { SpeechPunctuator(context.applicationContext) }.getOrNull()
     }
-    val speechCandidateSelector = remember { SpeechCandidateSelector() }
     val speechRecognizer = remember(chatboxViewModel) {
         ContinuousSpeechRecognizer(
             context = context,
@@ -80,8 +78,7 @@ fun MessageField(
                     Toast.LENGTH_LONG
                 ).show()
             },
-            transformResult = { speechPunctuator?.transform(it) ?: it },
-            selectFinalResult = speechCandidateSelector::select
+            transformResult = { speechPunctuator?.transform(it) ?: it }
         )
     }
     val microphonePermissionLauncher = rememberLauncherForActivityResult(
