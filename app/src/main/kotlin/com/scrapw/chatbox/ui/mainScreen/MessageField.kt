@@ -47,7 +47,6 @@ import com.scrapw.chatbox.R
 import com.scrapw.chatbox.data.SettingsStates
 import com.scrapw.chatbox.speech.ContinuousSpeechRecognizer
 import com.scrapw.chatbox.speech.SpeechForegroundService
-import com.scrapw.chatbox.speech.SpeechPunctuator
 import com.scrapw.chatbox.ui.ChatboxViewModel
 import com.scrapw.chatbox.ui.common.HapticConstants
 import kotlinx.coroutines.delay
@@ -61,9 +60,6 @@ fun MessageField(
 ) {
     val context = LocalContext.current
     var isListening by remember { mutableStateOf(false) }
-    val speechPunctuator = remember {
-        runCatching { SpeechPunctuator(context.applicationContext) }.getOrNull()
-    }
     val speechRecognizer = remember(chatboxViewModel) {
         ContinuousSpeechRecognizer(
             context = context,
@@ -77,8 +73,7 @@ fun MessageField(
                     context.getString(R.string.speech_recognition_unavailable),
                     Toast.LENGTH_LONG
                 ).show()
-            },
-            transformResult = { speechPunctuator?.transform(it) ?: it }
+            }
         )
     }
     val microphonePermissionLauncher = rememberLauncherForActivityResult(
@@ -99,7 +94,6 @@ fun MessageField(
     DisposableEffect(speechRecognizer) {
         onDispose {
             speechRecognizer.destroy()
-            speechPunctuator?.release()
             SpeechForegroundService.stop(context)
         }
     }
