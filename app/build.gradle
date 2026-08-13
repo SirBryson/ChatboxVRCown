@@ -7,6 +7,39 @@ plugins {
 def keystorePropertiesFile = rootProject.file("keystore.properties");
 def keystoreProperties = new Properties()
 
+def punctuationModelVersion = "sherpa-onnx-online-punct-en-2024-08-06"
+def punctuationArchive = layout.buildDirectory.file("downloads/${punctuationModelVersion}.tar.bz2")
+def punctuationAssetsDir = layout.buildDirectory.dir("generated/punctuationAssets")
+
+tasks.register("downloadPunctuationModel") {
+    outputs.file(punctuationArchive)
+    doLast {
+        def destination = punctuationArchive.get().asFile
+        if (!destination.exists()) {
+            destination.parentFile.mkdirs()
+            new URL(
+                "https://github.com/k2-fsa/sherpa-onnx/releases/download/" +
+                    "punctuation-models/${punctuationModelVersion}.tar.bz2"
+            ).withInputStream { input ->
+                destination.withOutputStream { output -> output << input }
+            }
+        }
+    }
+}
+
+tasks.register("preparePunctuationAssets", Copy) {
+    dependsOn("downloadPunctuationModel")
+    from({ tarTree(resources.bzip2(punctuationArchive.get().asFile)) }) {
+        include "${punctuationModelVersion}/model.int8.onnx"
+        include "${punctuationModelVersion}/bpe.vocab"
+        eachFile { file ->
+            file.path = "punctuation/${file.name}"
+        }
+        includeEmptyDirs = false
+    }
+    into(punctuationAssetsDir)
+}
+
 if (keystorePropertiesFile.exists()){
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
@@ -36,6 +69,9 @@ android {
         vectorDrawables {
             useSupportLibrary true
         }
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
     }
 
     buildTypes {
@@ -62,6 +98,9 @@ android {
         compose true
         buildConfig true
     }
+    sourceSets {
+        main.assets.srcDir(punctuationAssetsDir)
+    }
     composeOptions {
         kotlinCompilerExtensionVersion '1.5.9'
     }
@@ -71,6 +110,8 @@ android {
         }
     }
 }
+
+preBuild.dependsOn("preparePunctuationAssets")
 
 aboutLibraries {
     configPath = "config"
@@ -94,6 +135,7 @@ dependencies {
     implementation 'androidx.navigation:navigation-compose:2.7.7'
 
     implementation 'com.illposed.osc:javaosc-core:0.7'
+    implementation 'com.github.k2-fsa.sherpa-onnx:sherpa-onnx:v1.13.5'
 
 //    implementation 'com.github.alorma:compose-settings-ui-m3:1.0.3'
     implementation 'com.github.alorma:compose-settings-storage-base:1.0.3'
