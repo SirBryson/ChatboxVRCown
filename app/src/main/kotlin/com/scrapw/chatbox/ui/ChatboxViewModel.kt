@@ -23,6 +23,8 @@ import com.scrapw.chatbox.ui.mainScreen.ConversationUiState
 import com.scrapw.chatbox.ui.mainScreen.Message
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -42,6 +44,10 @@ class ChatboxViewModel(
 ) : ViewModel() {
 
     companion object {
+        private const val VRCHAT_SPEECH_CHARACTER_LIMIT = 140
+        private const val SPEECH_SESSION_RESET_DELAY_MILLIS = 7_500L
+        private const val VRCHAT_CLEAR_DELAY_MILLIS = 25_000L
+
         private lateinit var instance: ChatboxViewModel
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
@@ -169,6 +175,61 @@ class ChatboxViewModel(
             if (messengerUiState.value.isTypingIndicator) {
                 osc.typing = message.text.isNotEmpty()
             }
+        }
+    }
+
+    private var speechCommittedText = ""
+
+    /**
+     * Replace only the current recognition session while retaining earlier sessions
+     * from the same 7.5-second chatbox window.
+     */
+    fun onSpeechPartial(text: String, local: Boolean = false) {
+        val osc = if (!local) remoteChatboxOSC else localChatboxOSC
+        val combinedText = joinSpeechText(speechCommittedText, text)
+        val visibleText = combinedText.takeLast(VRCHAT_SPEECH_CHARACTER_LIMIT)
+        messageText.value = TextFieldValue(visibleText, TextRange(visibleText.length))
+        osc.sendRealtimeMessage(visibleText)
+        scheduleSpeechTimeouts(osc)
+    }
+
+    /** Commit this internal recognizer session without ending the chatbox window. */
+    fun onSpeechFinal(text: String, local: Boolean = false) {
+        if (text.isBlank()) return
+        val osc = if (!local) remoteChatboxOSC else localChatboxOSC
+        speechCommittedText = joinSpeechText(speechCommittedText, text)
+        val visibleText = speechCommittedText.takeLast(VRCHAT_SPEECH_CHARACTER_LIMIT)
+        osc.sendRealtimeMessage(visibleText, isFinal = true)
+        messageText.value = TextFieldValue(visibleText, TextRange(visibleText.length))
+        scheduleSpeechTimeouts(osc)
+    }
+
+    private fun joinSpeechText(existing: String, addition: String): String =
+        listOf(existing.trim(), addition.trim())
+            .filter { it.isNotEmpty() }
+            .joinToString(" ")
+
+    private var speechSessionResetJob: Job? = null
+    private var vrChatboxClearJob: Job? = null
+
+    private fun scheduleSpeechTimeouts(osc: ChatboxOSC) {
+        speechSessionResetJob?.cancel()
+        vrChatboxClearJob?.cancel()
+
+        speechSessionResetJob = viewModelScope.launch {
+            delay(SPEECH_SESSION_RESET_DELAY_MILLIS)
+            if (speechCommittedText.isNotBlank()) {
+                conversationUiState.addMessage(
+                    Message(speechCommittedText, false, Instant.now())
+                )
+            }
+            speechCommittedText = ""
+            messageText.value = TextFieldValue("", TextRange.Zero)
+        }
+
+        vrChatboxClearJob = viewModelScope.launch {
+            delay(VRCHAT_CLEAR_DELAY_MILLIS)
+            osc.sendRealtimeMessage("", isFinal = true)
         }
     }
 

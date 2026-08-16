@@ -26,6 +26,8 @@ Chatbox is an Android app that using OSC to help players send Chatbox messages t
 ## Features
 
 - Helps VR players send messages quickly from their cell phones
+- Continuous English speech-to-text with live partial transcripts
+- Automatically starts a fresh transcript after each spoken utterance
 - Provides a floating button to open the Chatbox in VRChat Mobile with one click
 - Quickly edit sent messages
 - Quickly repeat messages that others have not seen, or that expired
@@ -37,6 +39,41 @@ Chatbox is an Android app that using OSC to help players send Chatbox messages t
 [Github Releases](https://github.com/ScrapW/Chatbox/releases) is the only source where you can get official Chatbox downloads.
 
 ## Instructions
+
+### Continuous speech-to-text
+
+1. Configure the OSC destination and enable OSC in VRChat.
+2. Tap the microphone button and grant microphone access when prompted.
+3. Keep speaking normally. Partial transcripts replace the current VRChat chatbox text while
+   you speak. A short pause completes the utterance and automatically starts a new one.
+4. Tap the microphone button again to stop listening.
+
+While voice input is active, a foreground-service notification keeps microphone access and the
+recognition process alive with the display off. The app also holds a partial wake lock until voice
+input is stopped, so remember to stop it after leaving VRChat.
+
+Voice text uses a rolling 140-character window: once it gets longer, the oldest characters are
+removed from the beginning while new words keep flowing into the same VRChat chatbox. After 7.5
+seconds without a new speech result, the app closes and resets its local speech buffer so the next
+speech starts a new session. It does not clear the existing VRChat bubble until 25 seconds of
+silence have elapsed. Short
+pauses may restart Android's internal recognition session, but completed session text remains in
+the same rolling chatbox buffer until the 7.5-second local session timeout.
+
+Partial speech results are sent to OSC immediately without application-side throttling. Android's
+internal endpointer is asked to wait up to three seconds of silence before finalizing a recognition
+session, preserving more context through short pauses and stutters.
+
+Speech recognition is currently fixed to English (`en-US`). It uses the speech recognition
+service installed on the Android device; partial-result quality and offline availability depend
+on that service. On Android 13 and newer, the app requests quality-optimized automatic
+punctuation, capitalization, and formatted partial-result revisions. Recognition providers may
+ignore this request. The app therefore also runs the recognized English text through a small local
+online punctuation model, adding punctuation and capitalization without uploading the transcript
+to another service. If that model cannot initialize, speech recognition continues with raw text.
+For final results, the app requests up to five hypotheses from the Android recognizer and
+conservatively re-ranks them using provider confidence and obvious English grammar errors. It can
+only choose a recognizer-provided hypothesis and never invent or replace words itself.
 
 ### Send messages from your phone to your PC client
 

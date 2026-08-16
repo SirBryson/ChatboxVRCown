@@ -44,6 +44,13 @@
     <string name="message_card_copy">Copy this message to message field</string>
     <string name="message_card_restore">Restore this message to message field</string>
     <string name="send">Send</string>
+    <string name="start_voice_input">Start continuous voice input</string>
+    <string name="stop_voice_input">Stop continuous voice input</string>
+    <string name="speech_recognition_unavailable">Speech recognition is not available on this device.</string>
+    <string name="microphone_permission_required">Microphone permission is required for voice input.</string>
+    <string name="speech_notification_channel">Continuous speech recognition</string>
+    <string name="speech_notification_title">VRChat speech-to-text active</string>
+    <string name="speech_notification_text">Listening continues while the screen is off. Open the app to stop.</string>
     <string name="open_chatbox">Open chatbox</string>
     <string name="overlay_permission_request">Please allow Chatbox display over other app</string>
     <string name="overlay_lock_messenger">Lock messenger overlay</string>
