@@ -95,6 +95,13 @@ class ChatboxOSC(
                 listOf(text.isNotEmpty() && !isFinal),
                 50
             )
+
+            // VRChat may ignore an input update that arrives too soon after the
+            // previous partial transcript. Once recognition goes quiet, resend
+            // the newest state after its update interval. A newer transcript
+            // cancels this job, so stale text can never overwrite newer text.
+            delay(1_100)
+            sendOscMessageNow("/chatbox/input", listOf(text, true, false))
         }
     }
 }
